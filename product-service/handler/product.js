@@ -7,6 +7,8 @@ const { isAuthenticated } = require("../../IsAuthenticated");
 
 const productRouter = require("express").Router();
 
+
+
 productRouter.post("/create", async (req, res, next) => {
   try {
     const { name, price, desc } = req.body;
@@ -19,21 +21,40 @@ productRouter.post("/create", async (req, res, next) => {
 });
 
 
+
+
+
+// ---------------------> get requset from client 
+
 productRouter.post("/buy",isAuthenticated, async (req, res, next) => {
   try {
-    console.log("req");
+
+    // find data product in DB And push to Order Microservice 
     const { productIds = [] } = req.body;
     const products = await productModel.find({_id:{$in: productIds}})
     const {email} = req.user;
-    await pushToQueue("ORDER" ,{products, userEmail : email} )
-    const channel  = await createQueue("PRODUCT");
-    channel.consume("PRODUCT" , msg =>{
-      console.log(JSON.parse(msg.content.toString()));
- 
-    })
 
-    return res.json({
-        message : "your order created"
+    // ----------> Sent(push) to Order Microservice 
+    await pushToQueue("ORDER" ,{products, userEmail : email} )
+
+
+    // -----------> Create gueue Product 
+    const channel  = await createQueue("PRODUCT");
+
+
+    // ---------- listen to Product Chanel for get data from Order Microservice 
+ 
+    channel.consume("PRODUCT" ,async msg =>{
+      console.log("message Product micro Servise : ",JSON.parse(msg.content.toString()));
+       data = JSON.parse(msg.content.toString())
+
+      setInterval(() => {
+        return res.json({
+            message : "your order created" , 
+            data
+        })
+      }, 2500);
+
     })
 
   } catch (error) {

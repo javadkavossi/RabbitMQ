@@ -9,15 +9,22 @@ const connectTochannel = async()=>{
      console.log("can not connect to rabbit mq server ");   
     }
 }
-
 // ========== return Chanel for designPattern SingleTon =====================
 
 const returnChannel = async()=>{
     if(!channel){
         channel = await connectTochannel()
-    }
+    }    
+    return channel
+}    
+
+// =============  create Queue ==================
+const createQueue = async(queueName)=>{
+    const channel =await returnChannel()
+    await channel.assertQueue(queueName)
     return channel
 }
+
 
 // =================== PushData ========================
 
@@ -27,15 +34,8 @@ const pushToQueue = async(queueName, data)=>{
         return channel.sendToQueue(queueName,Buffer.from(JSON.stringify(data)))
     } catch (error) {
         console.log(error.message)
-    }
-}
-
-// ===============================
-const createQueue = async(queueName)=>{
-    const channel =await returnChannel()
-    await channel.assertQueue(queueName)
-    return channel
-}
+    }    
+}    
 
 
 
