@@ -7,8 +7,6 @@ const { isAuthenticated } = require("../../IsAuthenticated");
 
 const productRouter = require("express").Router();
 
-
-
 productRouter.post("/create", async (req, res, next) => {
   try {
     const { name, price, desc } = req.body;
@@ -20,48 +18,59 @@ productRouter.post("/create", async (req, res, next) => {
   }
 });
 
+// ---------------------> get requset from client
 
-
-
-
-// ---------------------> get requset from client 
-
-productRouter.post("/buy",isAuthenticated, async (req, res, next) => {
+productRouter.post("/buy", isAuthenticated, async (req, res, next) => {
   try {
-
-    // find data product in DB And push to Order Microservice 
+    // find data product in DB And push to Order Microservice
     const { productIds = [] } = req.body;
-    const products = await productModel.find({_id:{$in: productIds}})
-    const {email} = req.user;
+    const products = await productModel.find({ _id: { $in: productIds } });
+    const { email } = req.user;
 
-    // ----------> Sent(push) to Order Microservice 
-    await pushToQueue("ORDER" ,{products, userEmail : email} )
+    // ----------> Sent(push) to Order Microservice
+    await pushToQueue("ORDER", { products, userEmail: email });
 
+    // -----------> Create gueue Product
+    const { channel, queueDetails } = await createQueue("PRODUCT");
 
-    // -----------> Create gueue Product 
-    const channel  = await createQueue("PRODUCT");
+    console.log("queueDetails", queueDetails);
 
+    // ---------- listen to Product Chanel for get data from Order Microservice
 
-    // ---------- listen to Product Chanel for get data from Order Microservice 
- 
-    channel.consume("PRODUCT" ,async msg =>{
-      console.log("message Product micro Servise : ",JSON.parse(msg.content.toString()));
-       data = JSON.parse(msg.content.toString())
+    let order = [];
 
-      setInterval(() => {
-        return res.json({
-            message : "your order created" , 
-            data
-        })
-      }, 2500);
+    let index = 0;
+    channel.consume("PRODUCT", async (msg) => {
+      if (queueDetails.messageCount < index) {
+        index = 0;
+      }
+      order.push(JSON.parse(msg.content.toString()));
+      console.log(
+        "message Product micro Servise : ",
+        // JSON.parse(msg.content.toString())
+        index,
+        queueDetails.messageCount
+      );
+      if (index == queueDetails.messageCount) {
+        res.json({
+          message: "your order created",
+          order,
+        });
+      }
+      channel.ack(msg);
+      index++;
+    });
 
-    })
-
+    // if (!res.headersSent) {
+    //   res.json({
+    //     message: "your order created",
+    //     data: senddata,
+    //   });
+    // }
   } catch (error) {
     next(error);
   }
 });
-
 
 module.exports = {
   productRouter,

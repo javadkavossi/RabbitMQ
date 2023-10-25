@@ -24,6 +24,7 @@ const returnChannel = async () => {
 
 const pushToQueue = async (queueName, data) => {
   try {
+    await returnChannel()
     await channel.assertQueue(queueName);
     return channel.sendToQueue(queueName, Buffer.from(JSON.stringify(data)));
   } catch (error) {
@@ -33,9 +34,9 @@ const pushToQueue = async (queueName, data) => {
 
 // ===============================
 const createQueue = async (queueName) => {
-  const channel = await returnChannel();
-  await channel.assertQueue(queueName);
-  return channel;
+  let mychannel = await returnChannel();
+  const  queueDetails = await channel.assertQueue(queueName);
+  return {channel : mychannel  ,queueDetails};
 };
 
 // =================================
