@@ -18,6 +18,8 @@ productRouter.post("/create", async (req, res, next) => {
   }
 });
 
+
+
 // ---------------------> get requset from client
 
 productRouter.post("/buy", isAuthenticated, async (req, res, next) => {
@@ -41,9 +43,7 @@ productRouter.post("/buy", isAuthenticated, async (req, res, next) => {
 
     let index = 0;
     channel.consume("PRODUCT", async (msg) => {
-      if (queueDetails.messageCount < index) {
-        index = 0;
-      }
+    
       order.push(JSON.parse(msg.content.toString()));
       console.log(
         "message Product micro Servise : ",
@@ -51,22 +51,22 @@ productRouter.post("/buy", isAuthenticated, async (req, res, next) => {
         index,
         queueDetails.messageCount
       );
-      if (index == queueDetails.messageCount) {
-        res.json({
-          message: "your order created",
-          order,
-        });
-      }
+      // if (index == queueDetails.messageCount) {
+      //   res.json({
+      //     message: "your order created",
+      //     products,
+      //   });
+      // }
       channel.ack(msg);
-      index++;
+      // index++;
     });
 
-    // if (!res.headersSent) {
-    //   res.json({
-    //     message: "your order created",
-    //     data: senddata,
-    //   });
-    // }
+    
+      res.json({
+        message: "your order created",
+        data: products,
+      });
+    
   } catch (error) {
     next(error);
   }
